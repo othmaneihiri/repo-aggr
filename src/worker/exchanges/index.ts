@@ -57,7 +57,11 @@ export const exchanges = [
   new Hyperliquid(),
   new WhiteBIT()
 ] as Exchange[]
+import type { Position } from '@/types/Position'
 
+export async function loadSpotData(): Promise<Position[]> {
+  return await loadSpotData()
+}
 export function getExchangeById(id: string) {
   for (const exchange of exchanges) {
     if (exchange.id.toLowerCase() === id.toLowerCase()) {

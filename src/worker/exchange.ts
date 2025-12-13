@@ -3,6 +3,8 @@ import { EventEmitter } from 'eventemitter3'
 import { dispatchAsync } from './helpers/com'
 import { randomString, sleep } from './helpers/utils'
 import settings from './settings'
+import { loadSpotData } from '../worker/exchanges/binanceSpot'
+import type { Position } from '@/types/Position'
 interface Api extends WebSocket {
   _id: string
   _pending: string[]
@@ -845,6 +847,7 @@ class Exchange extends EventEmitter {
 
     return isReconecting
   }
+  
 }
 
 export default Exchange

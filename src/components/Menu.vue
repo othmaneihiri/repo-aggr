@@ -74,8 +74,8 @@
           @click="addPane('website')"
         >
           <div>
-            <div>Website</div>
-            <div class="dropdown-item__subtitle">Embed website</div>
+            <div>Terminal</div>
+            <div class="dropdown-item__subtitle">Profit check</div>
           </div>
           <i class="icon-plus" />
         </button>

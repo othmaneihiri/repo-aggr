@@ -457,66 +457,46 @@ export function getMarketProduct(exchangeId, symbol, noStable?: boolean) {
   }
 }
 
-export async function getApiSupportedMarkets() {
-  let products = import.meta.env.VITE_APP_API_SUPPORTED_PAIRS as
-    | string
-    | string[]
-  if (products && products.length) {
-    products = (products as string).split(',').map(market => market.trim())
-  } else {
-    products = []
-  }
 
-  if (!import.meta.env.VITE_APP_API_URL) {
-    return products
-  }
-
+export async function getApiSupportedMarkets(): Promise<string[]> {
   const now = Date.now()
+  const fallbackProducts = ['BTC-USD', 'ETH-USD', 'USDT-USD']
 
+  // 1️⃣ Try reading cached products
   try {
-    const cache = JSON.parse(localStorage.getItem('API_SUPPORTED_PAIRS'))
-
-    if (!cache || !cache.products) {
-      throw new Error('api supported pairs products cache is invalid')
+    const cache = JSON.parse(localStorage.getItem('API_SUPPORTED_PAIRS') || 'null')
+    if (cache && Array.isArray(cache.products) && cache.products.length) {
+      if (now - cache.timestamp <= 1000 * 60 * 5) { // 5 minutes cache
+        console.log('Using cached supported markets')
+        return cache.products
+      }
     }
-
-    if (!cache.products.length) {
-      throw new Error('api supported pairs need a refresh')
-    }
-
-    if (now - cache.timestamp > 1000 * 60 * 5) {
-      throw new Error('api supported pairs products cache has expired')
-    }
-
-    return cache.products
-  } catch (error) {
-    // console.error(error)
+  } catch (err) {
+    console.warn('Failed to read cached API_SUPPORTED_PAIRS', err)
   }
 
-  try {
-    const products = await fetch(getApiUrl('products')).then(response =>
-      response.json()
-    )
-
-    if (!products.length) {
-      throw new Error('invalid supported markets list')
-    }
-
-    localStorage.setItem(
-      'API_SUPPORTED_PAIRS',
-      JSON.stringify({
-        products,
-        timestamp: now
-      })
-    )
-
-    return products
-  } catch (error) {
-    console.error(error)
+  // 2️⃣ Skip fetch if localhost server is not running
+  if (!import.meta.env.VITE_APP_API_URL || import.meta.env.VITE_APP_API_URL.includes('localhost')) {
+    console.warn('API not available, using fallback/mock data')
+    return fallbackProducts
   }
 
-  return products
+  // 3️⃣ Try fetching from API
+  try {
+    const response = await fetch(getApiUrl('products'))
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+    const apiProducts = await response.json()
+    if (!Array.isArray(apiProducts) || apiProducts.length === 0) throw new Error('Invalid products list')
+
+    localStorage.setItem('API_SUPPORTED_PAIRS', JSON.stringify({ products: apiProducts, timestamp: now }))
+    return apiProducts
+  } catch (err) {
+    console.warn('API fetch failed, using fallback/mock data', err)
+    return fallbackProducts
+  }
 }
+
 
 export async function indexProducts(exchangeId: string, symbols: string[]) {
   console.debug(`[products.${exchangeId}] indexed ${symbols.length} products`)
