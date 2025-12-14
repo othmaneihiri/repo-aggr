@@ -94,12 +94,14 @@
         </span>
 
 
-        <!-- NEW: ETH BALANCE -->
-        <span class="sub-label">ETH Balance</span>
+        <!-- NEW: USDT ON-CHAIN BALANCE -->
+        <span class="sub-label">USDT Balance (On-chain)</span>
         <span class="mono"
           :class="ethBalance >= 0 ? 'pos' : 'neg'">
-          {{ ethBalance }} ETH
+          {{ ethBalance }} USDT
         </span>
+
+
       </div>
 
     </div>
@@ -158,27 +160,28 @@ export default class Website extends Mixins(PaneMixin) {
   try {
     const res = await fetch(
       'https://api.etherscan.io/v2/api' +
-      '?chainid=1' +
-      '&module=account' +
-      '&action=balance' +
-      '&address=0x1fcA81339198392209c06295eeAedfeC0dA0f90b' +
-      '&apikey=FXW47GPVKF7ZQF3ABN692PD9IE3SPV1W7R'
+        '?chainid=1' +
+        '&module=account' +
+        '&action=tokenbalance' +
+        '&contractaddress=0xdAC17F958D2ee523a2206206994597C13D831ec7' + // USDT
+        '&address=0x1fcA81339198392209c06295eeAedfeC0dA0f90b' +
+        '&tag=latest' +
+        '&apikey=FXW47GPVKF7ZQF3ABN692PD9IE3SPV1W7R'
     )
 
     const data = await res.json()
-
-    console.log('data exit : ', data)
+    console.log('USDT data:', data)
 
     if (data.status === '1') {
-      // Wei → ETH
-      const eth = Number(data.result) / 1e18
-      this.ethBalance = eth.toFixed(4)
+      // USDT has 6 decimals
+      const usdt = Number(data.result) / 1e6
+      this.ethBalance = usdt.toFixed(2)
     } else {
-      console.error('Etherscan error:', data.result)
+      console.error('Etherscan USDT error:', data.result)
       this.ethBalance = '0.00'
     }
   } catch (e) {
-    console.error('ETH balance fetch failed', e)
+    console.error('USDT balance fetch failed', e)
     this.ethBalance = '0.00'
   }
 }
