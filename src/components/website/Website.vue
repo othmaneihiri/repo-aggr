@@ -85,6 +85,14 @@
         >
           {{ fmt(totalUnrealized) }} USD
         </span>
+
+
+        <!-- NEW: ETH BALANCE -->
+        <span class="sub-label">ETH Balance</span>
+        <span class="mono"
+          :class="ethBalance >= 0 ? 'pos' : 'neg'">
+          {{ ethBalance }} ETH
+        </span>
       </div>
 
     </div>
@@ -106,15 +114,49 @@ export default class Website extends Mixins(PaneMixin) {
   @Prop({ type: String, default: 'positionsPane' })
   readonly paneId!: string
 
+  ethBalance: string = '0.00'
+
   mounted() {
     refreshPositions()
+    this.fetchEthBalance()
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         refreshPositions()
+        this.fetchEthBalance()
       }
     })
   }
+
+  async fetchEthBalance() {
+  try {
+    const res = await fetch(
+      'https://api.etherscan.io/v2/api' +
+      '?chainid=1' +
+      '&module=account' +
+      '&action=balance' +
+      '&address=0x1fcA81339198392209c06295eeAedfeC0dA0f90b' +
+      '&apikey=FXW47GPVKF7ZQF3ABN692PD9IE3SPV1W7R'
+    )
+
+    const data = await res.json()
+
+    console.log('data exit : ', data)
+
+    if (data.status === '1') {
+      // Wei → ETH
+      const eth = Number(data.result) / 1e18
+      this.ethBalance = eth.toFixed(4)
+    } else {
+      console.error('Etherscan error:', data.result)
+      this.ethBalance = '0.00'
+    }
+  } catch (e) {
+    console.error('ETH balance fetch failed', e)
+    this.ethBalance = '0.00'
+  }
+}
+
 
   /* STATE */
   get interactive() {
@@ -289,4 +331,6 @@ export default class Website extends Mixins(PaneMixin) {
     color: #E91E63;
   }
 }
+
+
 </style>
