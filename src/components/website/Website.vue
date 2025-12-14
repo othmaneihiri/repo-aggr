@@ -54,7 +54,9 @@
           v-for="p in safePositions"
           :key="p.symbol"
           class="row"
+          :class="{ compact: compactRows, noborder: !showBorders }"
         >
+
           <span class="symbol">
             {{ p.symbol }}
             <em>SPOT</em>
@@ -65,8 +67,13 @@
 
           <span
             class="right mono pnl"
-            :class="p.unrealized >= 0 ? 'pos' : 'neg'"
+            :style="{
+              color: p.unrealized >= 0
+                ? pnlPositiveColor
+                : pnlNegativeColor
+            }"
           >
+
             {{ fmt(p.unrealized) }}
           </span>
         </div>
@@ -111,6 +118,11 @@ import { positions, usdtBalance, refreshPositions } from '@/store/positions'
 })
 export default class Website extends Mixins(PaneMixin) {
 
+  pnlPositiveColor = '#2962FF'
+  pnlNegativeColor = '#E91E63'
+  compactRows = false
+  showBorders = true
+
   @Prop({ type: String, default: 'positionsPane' })
   readonly paneId!: string
 
@@ -126,6 +138,20 @@ export default class Website extends Mixins(PaneMixin) {
         this.fetchEthBalance()
       }
     })
+    this.loadTableSettings()
+
+  }
+
+  loadTableSettings() {
+    const s = localStorage.getItem('portfolioTableSettings')
+    if (!s) return
+
+    const settings = JSON.parse(s)
+
+    this.pnlPositiveColor = settings.pnlPositiveColor || this.pnlPositiveColor
+    this.pnlNegativeColor = settings.pnlNegativeColor || this.pnlNegativeColor
+    this.compactRows = !!settings.compactRows
+    this.showBorders = settings.showBorders !== false
   }
 
   async fetchEthBalance() {
@@ -193,6 +219,15 @@ export default class Website extends Mixins(PaneMixin) {
 </script>
 
 <style lang="scss" scoped>
+.row.compact {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.row.noborder {
+  border-bottom: none !important;
+}
+
 /* ───────────────────────────── */
 /* GLOBAL BACKGROUND MATCH       */
 /* ───────────────────────────── */

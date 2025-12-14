@@ -86,6 +86,49 @@
         ></span>
       </label>
     </div>
+    <hr class="mb16" />
+
+<div class="form-group mb16">
+  <label>PnL Positive Color</label>
+  <input
+    type="color"
+    :value="tableSettings.pnlPositiveColor"
+    @input="updateSetting('pnlPositiveColor', $event.target.value)"
+  />
+</div>
+
+<div class="form-group mb16">
+  <label>PnL Negative Color</label>
+  <input
+    type="color"
+    :value="tableSettings.pnlNegativeColor"
+    @input="updateSetting('pnlNegativeColor', $event.target.value)"
+  />
+</div>
+
+<div class="form-group mb8">
+  <label class="checkbox-control">
+    <input
+      type="checkbox"
+      :checked="tableSettings.compactRows"
+      @change="updateSetting('compactRows', $event.target.checked)"
+    />
+    <div></div>
+    <span>Compact rows</span>
+  </label>
+</div>
+
+<div class="form-group mb8">
+  <label class="checkbox-control">
+    <input
+      type="checkbox"
+      :checked="tableSettings.showBorders"
+      @change="updateSetting('showBorders', $event.target.checked)"
+    />
+    <div></div>
+    <span>Show table borders</span>
+  </label>
+</div>
   </div>
 </template>
 
@@ -111,6 +154,25 @@ export default class WebsiteSettings extends Vue {
   $refs!: {
     input: HTMLInputElement
   }
+
+  get tableSettings() {
+    const s = localStorage.getItem('portfolioTableSettings')
+    return s
+      ? JSON.parse(s)
+      : {
+          pnlPositiveColor: '#2962FF',
+          pnlNegativeColor: '#E91E63',
+          compactRows: false,
+          showBorders: true
+        }
+  }
+
+  updateSetting(key: string, value: any) {
+    const settings = this.tableSettings
+    settings[key] = value
+    localStorage.setItem('portfolioTableSettings', JSON.stringify(settings))
+  }
+
 
   get originalUrlTrimmed() {
     const url = this.originalUrl.replace(/https?:\/\/(www\.)?/, '')
