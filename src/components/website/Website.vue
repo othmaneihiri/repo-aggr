@@ -1,5 +1,7 @@
 <template>
   <div class="pane-website">
+
+    <!-- HEADER -->
     <pane-header
       ref="paneHeader"
       :paneId="paneId"
@@ -19,85 +21,78 @@
             <span>Interactive</span>
           </label>
         </div>
+
         <button type="button" class="dropdown-item" @click="reload(true)">
           <i class="icon-refresh"></i>
           <span>Reload</span>
         </button>
-        <div class="dropdown-divider"></div>
       </template>
     </pane-header>
-    <div class="iframe__lock" v-if="locked">
-      <div class="ml8 mr8">
-        <p>
-          Load
+
+    <!-- PORTFOLIO -->
+    <div class="portfolio">
+
+      <!-- BALANCE -->
+      <div class="portfolio__balance">
+        <span class="label">USDT Balance</span>
+        <span class="value">
+          {{ fmt(usdtBalanceValue, 4) }}
+          <small>USDT</small>
+        </span>
+      </div>
+
+      <!-- POSITIONS -->
+      <div class="portfolio__table">
+        <div class="row header">
+          <span>Symbol</span>
+          <span class="right">Entry</span>
+          <span class="right">Size</span>
+          <span class="right">PnL</span>
+        </div>
+
+        <div
+          v-for="p in safePositions"
+          :key="p.symbol"
+          class="row"
+        >
+          <span class="symbol">
+            {{ p.symbol }}
+            <em>SPOT</em>
+          </span>
+
+          <span class="right mono">{{ fmt(p.entry) }}</span>
+          <span class="right mono">{{ p.size }}</span>
+
           <span
-            class="text-condensed"
-            v-text="trimmedUrl"
-            title="url"
-            v-tippy
-          ></span>
-          ?
-        </p>
-        <div class="text-center">
-          <button class="btn" @click="$store.commit(paneId + '/UNLOCK_URL')">
-            Yes, authorize
-          </button>
+            class="right mono pnl"
+            :class="p.unrealized >= 0 ? 'pos' : 'neg'"
+          >
+            {{ fmt(p.unrealized) }}
+          </span>
+        </div>
+
+        <div v-if="safePositions.length === 0" class="empty">
+          No open spot positions
         </div>
       </div>
-    </div>
-    <div class="iframe__wrapper" v-else>
-      
-<!-- USDT BALANCE -->
-    <div class="cash">
-      <span>USDT Balance</span>
-<strong>{{ fmt(usdtBalanceValue, 4) }} USDT</strong>
-    </div>
 
-    <!-- POSITIONS TABLE -->
-    <div class="table-wrapper">
-      <table class="positions-table">
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Entry</th>
-            <th>Size</th>
-            <th>Unrealized</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="safePositions.length === 0">
-            <td colspan="4" class="empty">No spot positions found</td>
-          </tr>
-          <tr v-else v-for="p in safePositions" :key="p.symbol">
-            <td class="symbol">
-              {{ p.symbol }}
-              <span class="tag">SPOT</span>
-            </td>
-            <td>{{ fmt(p.entry) }}</td>
-            <td>{{ p.size }}</td>
-            <td class="pnl" :class="(p.unrealized ?? 0) >= 0 ? 'positive' : 'negative'">
-              {{ fmt(p.unrealized) }} USD
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- TOTAL -->
-    <div class="footer">
-      <span>Total Unrealized</span>
-      <span :class="totalUnrealized >= 0 ? 'positive' : 'negative'">
-        {{ fmt(totalUnrealized) }} USD
-      </span>
-    </div>
-
+      <!-- TOTAL -->
+      <div class="portfolio__total">
+        <span>Total Unrealized</span>
+        <span
+          class="mono"
+          :class="totalUnrealized >= 0 ? 'pos' : 'neg'"
+        >
+          {{ fmt(totalUnrealized) }} USD
+        </span>
+      </div>
 
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { Component, Mixins, Watch, Prop } from 'vue-property-decorator'
+import { Component, Mixins, Prop } from 'vue-property-decorator'
 import PaneHeader from '@/components/panes/PaneHeader.vue'
 import PaneMixin from '@/mixins/paneMixin'
 import { positions, usdtBalance, refreshPositions } from '@/store/positions'
@@ -107,29 +102,23 @@ import { positions, usdtBalance, refreshPositions } from '@/store/positions'
   name: 'Website'
 })
 export default class Website extends Mixins(PaneMixin) {
-  // --- Props ---
+
   @Prop({ type: String, default: 'positionsPane' })
   readonly paneId!: string
 
-  // --- Internal state ---
-  customId = ''
-  private _reloadTimeout: number | null = null
+  mounted() {
+    refreshPositions()
 
-  $refs!: {
-    iframe: HTMLIFrameElement
-    paneHeader: PaneHeader
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        refreshPositions()
+      }
+    })
   }
 
-  // --- Computed getters ---
-  get locked() {
-    return this.$store.state[this.paneId]?.locked
-  }
-
-  get url() {
-    return (
-      this.$store.state[this.paneId]?.url ||
-      'https://alternative.me/crypto/fear-and-greed-index.png'
-    )
+  /* STATE */
+  get interactive() {
+    return this.$store.state[this.paneId]?.interactive
   }
 
   get usdtBalanceValue(): number {
@@ -138,284 +127,166 @@ export default class Website extends Mixins(PaneMixin) {
       : 0
   }
 
-
-
-
-
-  get interactive() {
-    return this.$store.state[this.paneId]?.interactive
-  }
-
-  get invert() {
-    return this.$store.state[this.paneId]?.invert
-  }
-
-  get reloadTimer() {
-    return this.$store.state[this.paneId]?.reloadTimer
-  }
-
-  get zoom() {
-    return this.$store.state.panes?.panes?.[this.paneId]?.zoom || 1
-  }
-
-  get style() {
-    const size = (1 / this.zoom) * 100
-    return {
-      transform: `scale(${this.zoom})`,
-      width: size + '%',
-      height: size + '%',
-      pointerEvents: this.interactive ? 'all' : 'none'
-    }
-  }
-
-  get trimmedUrl() {
-    if (!this.url) return ''
-    if (this.url.length <= 33) return this.url
-    return this.url.slice(0, 15) + '[...]' + this.url.slice(-15)
-  }
-
-  // --- Watchers ---
-  @Watch('reloadTimer')
-  onReloadTimerChange() {
-    this.setupReloadTimer()
-  }
-
-  // --- Lifecycle hooks ---
-  created() {
-    this.setupReloadTimer()
-  }
-
-  beforeDestroy() {
-    if (this._reloadTimeout) clearTimeout(this._reloadTimeout)
-  }
-
-  mounted() {
-    refreshPositions()
-    console.log(
-    'USDT balance from store:',
-    this.$store.state.positions?.usdtBalance
-  )
-  }
-
-  // --- Methods ---
-  getSettingsDialog() {
-    return import('@/components/website/WebsiteDialog.vue')
-  }
-
-  setupReloadTimer() {
-    if (this._reloadTimeout) clearTimeout(this._reloadTimeout)
-    if (!this.reloadTimer) return
-
-    let interval = this.reloadTimer.trim()
-
-    if (/[\d.]+s/.test(interval)) {
-      interval = parseFloat(interval) * 1000
-    } else if (/[\d.]+h/.test(interval)) {
-      interval = parseFloat(interval) * 1000 * 60 * 60
-    } else {
-      interval = parseFloat(interval) * 1000 * 60
-    }
-
-    if (!interval) return
-
-    const now = Date.now()
-    let delay = Math.ceil(now / interval) * interval - now - 20
-    if (delay < 1000) delay += interval
-
-    this._reloadTimeout = setTimeout(() => {
-      this._reloadTimeout = null
-      this.reload()
-      this.setupReloadTimer()
-    }, delay) as unknown as number
-  }
-
-  reload(focus?: boolean) {
-    // Reload iframe (if exists)
-    if (this.$refs.iframe) {
-      this.$refs.iframe.src += ''
-      if (focus) {
-        this.$refs.iframe.onload = () => {
-          this.$refs.iframe.onload = null
-          this.$refs.iframe.focus()
-        }
-      }
-    }
-
-    // Refresh positions data
-    refreshPositions()
-  }
-
-  // --- Computed helpers for positions ---
   get safePositions() {
     return Array.isArray(positions.value) ? positions.value : []
   }
 
   get totalUnrealized() {
-    return this.safePositions.reduce((sum, p) => sum + (p.unrealized ?? 0), 0)
+    return this.safePositions.reduce(
+      (sum, p) => sum + (p.unrealized ?? 0),
+      0
+    )
   }
 
-  // --- Formatter ---
+  /* ACTIONS */
+  reload() {
+    refreshPositions()
+  }
+
+  /* FORMAT */
   fmt(v?: number, d = 2) {
     return typeof v === 'number' ? v.toFixed(d) : '0.00'
   }
 }
 </script>
 
-
 <style lang="scss" scoped>
-.iframe__lock {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba($red, 0.5);
+/* ───────────────────────────── */
+/* GLOBAL BACKGROUND MATCH       */
+/* ───────────────────────────── */
+.pane-website,
+.portfolio,
+.portfolio__balance,
+.portfolio__total,
+.portfolio__table {
+  background: #161616;
+  color: #e5e7eb;
 }
 
-.iframe__wrapper {
-  width: 100%;
+/* ───────────────────────────── */
+/* PORTFOLIO LAYOUT              */
+/* ───────────────────────────── */
+.portfolio {
   height: 100%;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
 
-  iframe {
-    border: 0;
-    width: 100%;
-    height: 100%;
-    transform-origin: top left;
+/* ───────────────────────────── */
+/* BALANCE                       */
+/* ───────────────────────────── */
+.portfolio__balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 12px;
+    border-bottom: 0.15px solid #494949ff;
 
-    &.-solid {
-      filter: invert(1);
+  .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #9ca3af;
+  }
+
+  .value {
+    font-size: 20px;
+    font-weight: 400;
+
+    small {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-left: 4px;
     }
   }
 }
 
-.pane-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #1a202c;
-  padding: 10px;
-  color: #e5e7eb;
-}
-
-.pane-header__highlight {
-  display: flex;
-  align-items: center;
-  font-weight: bold;
-}
-
-.pane-header__edit {
-  margin-left: 8px;
-  background: none;
-  border: none;
-  color: inherit;
-}
-
-.dropdown-item {
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.btn-group {
-  display: flex;
-  justify-content: space-between;
-}
-
-.icon-plus, .icon-minus, .icon-enlarge, .icon-copy-paste, .icon-download, .icon-trash {
-  margin-right: 8px;
-}
-
-
-.page {
-  color: #e5e7eb;
-  height: 95% !important;
-}
-
-.cash {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px;
-  background: #0f172a;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 20px;
-}
-
-.table-wrapper {
-  background: #0b0f14;
-  border-radius: 12px;
-  overflow: hidden;
-  max-height: 280px;
+/* ───────────────────────────── */
+/* TABLE (NO SCROLLBAR, STILL SCROLLS) */
+/* ───────────────────────────── */
+.portfolio__table {
+  flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: gray transparent;
+
+  /* hide scrollbar but keep scroll */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* Edge */
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr 1fr;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 0.15px solid #494949ff;
+
+    &.header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #161616;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #9ca3af;
+    }
+  }
+
+  .symbol {
+    font-weight: 400;
+
+    em {
+      margin-left: 6px;
+      font-size: 9px;
+      font-style: normal;
+      color: #6b7280;
+    }
+  }
+
+  .right {
+    text-align: right;
+  }
+
+  .mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pnl.pos {
+    color: #2962FF;
+  }
+
+  .pnl.neg {
+    color: #E91E63;
+  }
+
+  .empty {
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 12px;
+  }
 }
 
-.table-wrapper::-webkit-scrollbar {
-  width: 8px;
-}
-
-.table-wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.table-wrapper::-webkit-scrollbar-thumb {
-  background-color: gray;
-  border-radius: 4px;
-  border: 2px solid transparent;
-}
-
-.positions-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.positions-table th {
-  padding: 12px;
-  font-size: 12px;
-  color: #9ca3af;
-  background: #0f172a;
-  text-align: left;
-}
-
-.positions-table td {
-  padding: 12px;
-  border-top: 1px solid #1f2933;
-}
-
-.symbol {
-  font-weight: 600;
-}
-
-.tag {
-  margin-left: 6px;
-  padding: 2px 6px;
-  font-size: 10px;
-  background: #111827;
-  border-radius: 4px;
-  color: #9ca3af;
-}
-
-.pnl.positive {
-  color: #22c55e;
-}
-
-.pnl.negative {
-  color: #ef4444;
-}
-
-.footer {
+/* ───────────────────────────── */
+/* TOTAL                         */
+/* ───────────────────────────── */
+.portfolio__total {
   display: flex;
   justify-content: space-between;
-  font-weight: 600;
-  font-size: 20px;
-  margin-top: 10px;
-  color: #08fc2c;
-}
+  padding: 10px 12px;
+    border-top: 0.15px solid #494949ff;
+  font-weight: 400;
 
-.empty {
-  text-align: center;
-  color: #6b7280;
+  .pos {
+    color: #2962FF;
+  }
+
+  .neg {
+    color: #E91E63;
+  }
 }
 </style>
