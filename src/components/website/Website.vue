@@ -51,7 +51,7 @@
         </div>
 
         <div
-          v-for="p in safePositions"
+          v-for="p in filteredPositions"
           :key="p.symbol"
           class="row"
           :class="{ compact: compactRows, noborder: !showBorders }"
@@ -78,7 +78,7 @@
           </span>
         </div>
 
-        <div v-if="safePositions.length === 0" class="empty">
+        <div v-if="filteredPositions.length === 0" class="empty">
           No open spot positions
         </div>
       </div>
@@ -100,9 +100,86 @@
           :class="ethBalance >= 0 ? 'pos' : 'neg'">
           {{ ethBalance }} USDT
         </span>
-
-
       </div>
+
+<!-- BINANCE STYLE ORDER FORM -->
+<div class="binance-order">
+
+  <div class="order-top">
+    <span>Place Order</span>
+    <span class="pair">BTCUSDT</span>
+  </div>
+
+  <div class="order-type">
+    <select v-model="orderType">
+      <option value="MARKET">Market Order</option>
+    </select>
+  </div>
+
+  <div class="order-box">
+    <div class="order-field">
+      <span>BTC</span>
+      <input
+        type="number"
+        step="0.0001"
+        v-model.number="orderQty"
+        placeholder="0"
+      />
+    </div>
+
+    <div class="order-field disabled">
+      <span>USDT</span>
+      <input
+        type="text"
+        :value="(orderQty * lastPrice).toFixed(2)"
+        disabled
+      />
+    </div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="order-slider">
+    <input
+      type="range"
+      min="0"
+      max="100"
+      step="25"
+      v-model.number="orderPercent"
+      @input="applyPercent"
+    />
+    <div class="slider-label"> {{ orderPercent }}% </div>
+  </div>
+
+  <div class="order-options">
+    <span>REDUCE</span>
+    <span>TP/SL</span>
+  </div>
+
+  <!-- BUY / SELL -->
+  <div class="order-actions">
+    <button class="buy" @click="placeOrder('BUY')">
+      BUY / LONG
+      <small>≈ {{ lastPrice }}</small>
+    </button>
+
+    <button class="sell" @click="placeOrder('SELL')">
+      SELL / SHORT
+      <small>≈ {{ lastPrice }}</small>
+    </button>
+  </div>
+
+  <div class="order-footer">
+    <div>
+      <span>Total</span>
+      <strong>{{ usdtBalanceValue.toFixed(2) }} USDT</strong>
+    </div>
+    <div>
+      <span>Available</span>
+      <strong>{{ usdtBalanceValue.toFixed(2) }} USDT</strong>
+    </div>
+  </div>
+
+</div>
 
     </div>
   </div>
@@ -124,6 +201,12 @@ export default class Website extends Mixins(PaneMixin) {
   pnlNegativeColor = '#E91E63'
   compactRows = false
   showBorders = true
+
+  orderQty: number = 0
+orderType: string = 'MARKET'
+orderPercent: number = 0
+lastPrice: number = 88646.2
+
 
   @Prop({ type: String, default: 'positionsPane' })
   readonly paneId!: string
@@ -155,6 +238,48 @@ export default class Website extends Mixins(PaneMixin) {
     this.compactRows = !!settings.compactRows
     this.showBorders = settings.showBorders !== false
   }
+
+  applyPercent() {
+  const available = this.usdtBalanceValue
+  if (!available) return
+
+  const usdtAmount = (available * this.orderPercent) / 100
+  this.orderQty = usdtAmount / this.lastPrice
+}
+
+async placeOrder(side: 'BUY' | 'SELL') {
+  if (!this.orderQty || this.orderQty <= 0) return
+
+  const endpoint =
+    side === 'BUY'
+      ? '/api/binance/spot/buy'
+      : '/api/binance/spot/sell'
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_APP_API_TOKEN}`
+      },
+      body: JSON.stringify({
+        symbol: 'BTCUSDT',
+        quantity: this.orderQty
+      })
+    })
+
+    const data = await res.json()
+    console.log('Binance order:', data)
+
+    this.orderQty = 0
+    this.orderPercent = 0
+    refreshPositions()
+  } catch (e) {
+    console.error('Order error', e)
+  }
+}
+
+
 
   async fetchEthBalance() {
   try {
@@ -208,6 +333,14 @@ export default class Website extends Mixins(PaneMixin) {
       0
     )
   }
+
+  get filteredPositions() {
+  return this.safePositions.filter(p =>
+    typeof p.unrealized === 'number' &&
+    Math.abs(p.unrealized) >= 1
+  )
+}
+
 
   /* ACTIONS */
   reload() {
@@ -367,6 +500,129 @@ export default class Website extends Mixins(PaneMixin) {
 
   .neg {
     color: #E91E63;
+  }
+}
+
+/* ───────────────────────────── */
+/* BINANCE ORDER FORM            */
+/* ───────────────────────────── */
+.binance-order {
+  border-top: 0.15px solid #494949ff;
+  padding: 12px;
+  background: #0f0f0f;
+  font-size: 12px;
+}
+
+.order-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #9ca3af;
+
+  .pair {
+    color: #e5e7eb;
+  }
+}
+
+.order-type select {
+  width: 100%;
+  background: #161616;
+  border: 1px solid #333;
+  color: #e5e7eb;
+  padding: 6px;
+  margin-bottom: 8px;
+}
+
+.order-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.order-field {
+  background: #161616;
+  border: 1px solid #333;
+  padding: 6px;
+
+  span {
+    font-size: 10px;
+    color: #9ca3af;
+  }
+
+  input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #e5e7eb;
+    font-size: 13px;
+    outline: none;
+  }
+
+  &.disabled {
+    opacity: 0.6;
+  }
+}
+
+.order-slider {
+  margin: 10px 0;
+
+  input {
+    width: 100%;
+  }
+
+  .slider-label {
+    text-align: right;
+    font-size: 10px;
+    color: #9ca3af;
+  }
+}
+
+.order-options {
+  display: flex;
+  justify-content: space-between;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.order-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+
+  button {
+    padding: 10px;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .buy {
+    background: #00c087;
+    color: #000;
+  }
+
+  .sell {
+    background: #f6465d;
+    color: #000;
+  }
+
+  small {
+    font-size: 10px;
+    opacity: 0.8;
+  }
+}
+
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: #9ca3af;
+
+  strong {
+    color: #e5e7eb;
+    font-weight: 400;
   }
 }
 
