@@ -103,7 +103,6 @@
       </div>
 
 <!-- BINANCE STYLE ORDER FORM -->
-<div class="binance-order">
 
   <div class="order-top">
     <span>Place Order</span>
@@ -139,49 +138,6 @@
 
   <!-- SLIDER -->
   <!-- PERCENT INPUT -->
-<div class="order-slider">
-  <input
-  type="range"
-  min="0"
-  max="100"
-  step="1"
-  v-model.number="orderPercent"
-  @input="applyPercent"
-/>
-
-  <div class="slider-label">{{ orderPercent }}%</div>
-</div>
-
-
-  <div class="order-options">
-    <span>REDUCE</span>
-    <span>TP/SL</span>
-  </div>
-
-  <!-- BUY / SELL -->
-  <div class="order-actions">
-    <button class="buy" @click="placeOrder('BUY')">
-  BUY
-  <small>≈ {{ lastPrice }}</small>
-</button>
-
-<button class="sell" @click="placeOrder('SELL')">
-  SELL
-  <small>≈ {{ lastPrice }}</small>
-</button>
-
-  </div>
-
-  <div class="order-footer">
-    <div>
-      <span>Total</span>
-      <strong>{{ usdtBalanceValue.toFixed(2) }} USDT</strong>
-    </div>
-    <div>
-      <span>Available</span>
-      <strong>{{ usdtBalanceValue.toFixed(2) }} USDT</strong>
-    </div>
-  </div>
 
 </div>
 
