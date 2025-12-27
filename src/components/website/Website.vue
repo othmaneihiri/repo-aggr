@@ -102,43 +102,6 @@
         </span>
       </div>
 
-<!-- BINANCE STYLE ORDER FORM -->
-
-  <div class="order-top">
-    <span>Place Order</span>
-    <span class="pair">BTCUSDT</span>
-  </div>
-
-  <div class="order-type">
-    <select v-model="orderType">
-      <option value="MARKET">Market Order</option>
-    </select>
-  </div>
-
-  <div class="order-box">
-    <div class="order-field">
-      <span>BTC</span>
-      <input
-        type="number"
-        step="0.0001"
-        v-model.number="orderQty"
-        placeholder="0"
-      />
-    </div>
-
-    <div class="order-field disabled">
-      <span>USDT</span>
-      <input
-        type="text"
-        :value="(orderQty * lastPrice).toFixed(2)"
-        disabled
-      />
-    </div>
-  </div>
-
-  <!-- SLIDER -->
-  <!-- PERCENT INPUT -->
-
 </div>
 
     </div>

@@ -1,6 +1,6 @@
-/* ===============================
-   Azeret Mono - Regular
-   =============================== */
+/* =====================================================
+   Azeret Mono – Regular
+   ===================================================== */
 
 @font-face {
   font-family: 'Azeret Mono';
@@ -10,17 +10,38 @@
   font-display: swap;
 }
 
-/* ===============================
-   Force font globally
-   =============================== */
+/* =====================================================
+   App font variable
+   ===================================================== */
+
+:root {
+  --app-font: 'Azeret Mono', monospace;
+}
+
+/* =====================================================
+   Apply font ONLY at app root
+   (icons will keep their own font)
+   ===================================================== */
 
 html,
 body,
 #app {
-  font-family: 'Azeret Mono', monospace;
+  font-family: var(--app-font);
 }
 
-/* If some components override the font */
-* {
-  font-family: 'Azeret Mono', monospace !important;
+/* =====================================================
+   Form controls (safe)
+   ===================================================== */
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
+
+/* =====================================================
+   🚫 DO NOT add anything else here
+   🚫 NO * selector
+   🚫 NO icon overrides
+   ===================================================== */
