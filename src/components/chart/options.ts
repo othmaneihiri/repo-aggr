@@ -38,7 +38,7 @@ export const defaultChartOptions: DeepPartial<ChartOptions> = {
     text: '',
     horzAlign: 'center',
     vertAlign: 'center',
-  fontFamily: 'Azeret Mono',
+    fontFamily: 'Spline Sans Mono',
     fontStyle: '600'
   },
   layout: {
@@ -47,7 +47,7 @@ export const defaultChartOptions: DeepPartial<ChartOptions> = {
       color: 'transparent'
     },
     textColor: 'white',
-  fontFamily: 'Azeret Mono'
+    fontFamily: 'Barlow Semi Condensed'
   },
   grid: {
     horzLines: {
